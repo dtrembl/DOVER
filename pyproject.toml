@@ -1,0 +1,37 @@
+
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dover"
+version = "1.0.0"
+description = "Disentangled Video Quality Evaluator"
+requires-python = ">=3.8"
+dependencies = [
+    "torch",
+    "torchvision",
+    "opencv-python",
+    "decord",
+    "matplotlib",
+    "scipy",
+    "numpy",
+    "tqdm",
+    "timm",
+    "einops",
+    "wandb",
+    "scikit-video",
+    "thop",
+    "onnx",
+]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+dover = ["*.yml"]

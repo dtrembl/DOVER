@@ -41,7 +41,7 @@ def get_spatial_fragments(
         else:
             h = upsample
             w = int(upsample * old_w / old_h)
-        
+
         video = get_resized_video(video, h, w)
     size_h = fragments_h * fsize_h
     size_w = fragments_w * fsize_w
@@ -67,7 +67,7 @@ def get_spatial_fragments(
             video / 255.0, scale_factor=randratio, mode="bilinear"
         )
         video = (video * 255.0).type_as(ovideo)
-        
+
     assert dur_t % aligned == 0, "Please provide match vclip and align index"
     size = size_h, size_w
 
@@ -148,7 +148,12 @@ def get_resize_function(size_h, size_w, target_ratio=1, random_crop=False):
 
 
 def get_resized_video(
-    video, size_h=224, size_w=224, random_crop=False, arp=False, **kwargs,
+    video,
+    size_h=224,
+    size_w=224,
+    random_crop=False,
+    arp=False,
+    **kwargs,
 ):
     video = video.permute(1, 0, 2, 3)
     resize_opt = get_resize_function(
@@ -159,7 +164,10 @@ def get_resized_video(
 
 
 def get_arp_resized_video(
-    video, short_edge=224, train=False, **kwargs,
+    video,
+    short_edge=224,
+    train=False,
+    **kwargs,
 ):
     if train:  ## if during training, will random crop into square and then resize
         res_h, res_w = video.shape[-2:]
@@ -181,7 +189,11 @@ def get_arp_resized_video(
 
 
 def get_arp_fragment_video(
-    video, short_fragments=7, fsize=32, train=False, **kwargs,
+    video,
+    short_fragments=7,
+    fsize=32,
+    train=False,
+    **kwargs,
 ):
     if (
         train
@@ -206,7 +218,10 @@ def get_arp_fragment_video(
 
 
 def get_cropped_video(
-    video, size_h=224, size_w=224, **kwargs,
+    video,
+    size_h=224,
+    size_w=224,
+    **kwargs,
 ):
     kwargs["fragments_h"], kwargs["fragments_w"] = 1, 1
     kwargs["fsize_h"], kwargs["fsize_w"] = size_h, size_w
@@ -214,7 +229,9 @@ def get_cropped_video(
 
 
 def get_single_view(
-    video, sample_type="aesthetic", **kwargs,
+    video,
+    sample_type="aesthetic",
+    **kwargs,
 ):
     if sample_type.startswith("aesthetic"):
         video = get_resized_video(video, **kwargs)
@@ -227,37 +244,41 @@ def get_single_view(
 
 
 def spatial_temporal_view_decomposition(
-    video_path, sample_types, samplers, is_train=False, augment=False,
+    vreader,
+    sample_types,
+    samplers,
+    is_train=False,
+    augment=False,
 ):
-    video = {}
-    if video_path.endswith(".yuv"):
-        print("This part will be deprecated due to large memory cost.")
-        ## This is only an adaptation to LIVE-Qualcomm
-        ovideo = skvideo.io.vread(
-            video_path, 1080, 1920, inputdict={"-pix_fmt": "yuvj420p"}
-        )
-        for stype in samplers:
-            frame_inds = samplers[stype](ovideo.shape[0], is_train)
-            imgs = [torch.from_numpy(ovideo[idx]) for idx in frame_inds]
-            video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
-        del ovideo
-    else:
-        decord.bridge.set_bridge("torch")
-        vreader = VideoReader(video_path)
-        ### Avoid duplicated video decoding!!! Important!!!!
-        all_frame_inds = []
-        frame_inds = {}
-        for stype in samplers:
-            frame_inds[stype] = samplers[stype](len(vreader), is_train)
-            all_frame_inds.append(frame_inds[stype])
+    #video = {}
+    # if video_path.endswith(".yuv"):
+    #    print("This part will be deprecated due to large memory cost.")
+    #    ## This is only an adaptation to LIVE-Qualcomm
+    #    ovideo = skvideo.io.vread(
+    #        video_path, 1080, 1920, inputdict={"-pix_fmt": "yuvj420p"}
+    #    )
+    #    for stype in samplers:
+    #        frame_inds = samplers[stype](ovideo.shape[0], is_train)
+    #        imgs = [torch.from_numpy(ovideo[idx]) for idx in frame_inds]
+    #        video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
+    #    del ovideo
+    # else:
+    # decord.bridge.set_bridge("torch")
+    # vreader = VideoReader(video_path)
+    ### Avoid duplicated video decoding!!! Important!!!!
+    all_frame_inds = []
+    frame_inds = {}
+    for stype in samplers:
+        frame_inds[stype] = samplers[stype](len(vreader), is_train)
+        all_frame_inds.append(frame_inds[stype])
 
-        ### Each frame is only decoded one time!!!
-        all_frame_inds = np.concatenate(all_frame_inds, 0)
-        frame_dict = {idx: vreader[idx] for idx in np.unique(all_frame_inds)}
+    ### Each frame is only decoded one time!!!
+    all_frame_inds = np.concatenate(all_frame_inds, 0)
+    frame_dict = {idx: vreader[idx] for idx in np.unique(all_frame_inds)}
 
-        for stype in samplers:
-            imgs = [frame_dict[idx] for idx in frame_inds[stype]]
-            video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
+    for stype in samplers:
+        imgs = [frame_dict[idx] for idx in frame_inds[stype]]
+        video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
 
     sampled_video = {}
     for stype, sopt in sample_types.items():
@@ -272,7 +293,12 @@ import numpy as np
 
 class UnifiedFrameSampler:
     def __init__(
-        self, fsize_t, fragments_t, frame_interval=1, num_clips=1, drop_rate=0.0,
+        self,
+        fsize_t,
+        fragments_t,
+        frame_interval=1,
+        num_clips=1,
+        drop_rate=0.0,
     ):
 
         self.fragments_t = fragments_t
@@ -330,10 +356,10 @@ class ViewDecompositionDataset(torch.utils.data.Dataset):
         super().__init__()
 
         self.weight = opt.get("weight", 0.5)
-        
+
         self.fully_supervised = opt.get("fully_supervised", False)
         print("Fully supervised:", self.fully_supervised)
-        
+
         self.video_infos = []
         self.ann_file = opt["anno_file"]
         self.data_prefix = opt["data_prefix"]
@@ -387,7 +413,7 @@ class ViewDecompositionDataset(torch.utils.data.Dataset):
             except:
                 #### No Label Testing
                 video_filenames = []
-                for (root, dirs, files) in os.walk(self.data_prefix, topdown=True):
+                for root, dirs, files in os.walk(self.data_prefix, topdown=True):
                     for file in files:
                         if file.endswith(".mp4"):
                             video_filenames += [os.path.join(root, file)]
