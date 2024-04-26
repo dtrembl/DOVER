@@ -250,22 +250,7 @@ def spatial_temporal_view_decomposition(
     is_train=False,
     augment=False,
 ):
-    #video = {}
-    # if video_path.endswith(".yuv"):
-    #    print("This part will be deprecated due to large memory cost.")
-    #    ## This is only an adaptation to LIVE-Qualcomm
-    #    ovideo = skvideo.io.vread(
-    #        video_path, 1080, 1920, inputdict={"-pix_fmt": "yuvj420p"}
-    #    )
-    #    for stype in samplers:
-    #        frame_inds = samplers[stype](ovideo.shape[0], is_train)
-    #        imgs = [torch.from_numpy(ovideo[idx]) for idx in frame_inds]
-    #        video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
-    #    del ovideo
-    # else:
-    # decord.bridge.set_bridge("torch")
-    # vreader = VideoReader(video_path)
-    ### Avoid duplicated video decoding!!! Important!!!!
+    video = {}
     all_frame_inds = []
     frame_inds = {}
     for stype in samplers:
@@ -278,7 +263,7 @@ def spatial_temporal_view_decomposition(
 
     for stype in samplers:
         imgs = [frame_dict[idx] for idx in frame_inds[stype]]
-        video[stype] = torch.stack(imgs, 0).permute(3, 0, 1, 2)
+        video[stype] = torch.stack(imgs, 0).permute(1, 0, 2, 3)
 
     sampled_video = {}
     for stype, sopt in sample_types.items():
